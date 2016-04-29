@@ -5,16 +5,19 @@ module Mimi
     module Module
       extend ActiveSupport::Concern
 
+      included do
+        # register self
+        Mimi.loaded_modules << self unless Mimi.loaded_modules.include?(self)
+      end
+
       class_methods do
         def configure(opts = {})
-          @module_options = @module_default_options.deep_merge(opts)
+          @module_options = (@module_default_options || {}).deep_merge(opts)
           puts "** module #{self} configured"
         end
 
-        def path
-          p = Pathname.pwd.expand_path
-          puts "** #{self}.lib_path: #{p}"
-          p
+        def module_path
+          nil
         end
 
         def start(*)
@@ -30,7 +33,7 @@ module Mimi
         end
 
         def module_options
-          @module_options || {}
+          @module_options || @module_default_options || {}
         end
 
         def default_options(opts = {})

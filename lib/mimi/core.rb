@@ -34,13 +34,13 @@ module Mimi
       raise ArgumentError, "#{mod} is not a Mimi module" unless mod < Mimi::Core::Module
       puts "** module #{mod} is used"
       mod.configure(opts)
-      modules << mod
+      used_modules << mod unless used_modules.include?(mod)
     end
 
-    # Returns the list of registered (require-d) modules
+    # Returns the list of loaded (require-d) modules
     #
-    def modules
-      @modules ||= []
+    def loaded_modules
+      @loaded_modules ||= []
     end
 
     # Returns the list of used modules
@@ -49,12 +49,30 @@ module Mimi
       @used_modules ||= []
     end
 
+    # Returns all loaded module paths, which are defined (non nil)
+    #
+    def loaded_modules_paths
+      loaded_modules.map(&:module_path).reject(&:nil?)
+    end
+
     # Requires all files that match the glob.
     #
     def require_files(glob, root_path = app_root_path)
       Pathname.glob(root_path.join(glob)).each do |filename|
         require filename.expand_path
       end
+    end
+
+    # Starts all used modules in the ascending order
+    #
+    def start
+      used_modules.each { |m| m.start unless m.started? }
+    end
+
+    # Stops all used modules in the reversed order
+    #
+    def stop
+      used_modules.reverse.each { |m| m.stop if m.started? }
     end
   end # module Core
 
