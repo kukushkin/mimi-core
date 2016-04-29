@@ -13,7 +13,6 @@ module Mimi
       class_methods do
         def configure(opts = {})
           @module_options = (@module_default_options || {}).deep_merge(opts)
-          puts "** module #{self} configured"
         end
 
         def module_path

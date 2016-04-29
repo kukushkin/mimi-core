@@ -32,9 +32,9 @@ module Mimi
     #
     def use(mod, opts = {})
       raise ArgumentError, "#{mod} is not a Mimi module" unless mod < Mimi::Core::Module
-      puts "** module #{mod} is used"
       mod.configure(opts)
       used_modules << mod unless used_modules.include?(mod)
+      true
     end
 
     # Returns the list of loaded (require-d) modules
