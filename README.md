@@ -1,4 +1,4 @@
-# Mimi::Core
+# mimi-core
 
 Core module for *mimi*, microframework for microservices.
 
