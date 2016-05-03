@@ -19,6 +19,10 @@ module Mimi
           nil
         end
 
+        def module_manifest
+          {}
+        end
+
         def start(*)
           @module_started = true
         end
