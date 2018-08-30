@@ -1,25 +1,28 @@
-require 'active_support/concern'
+# frozen_string_literal: true
 
 module Mimi
   module Core
     module Module
-      extend ActiveSupport::Concern
-
-      included do
-        # register self
-        Mimi.loaded_modules << self unless Mimi.loaded_modules.include?(self)
+      #
+      # Invoked on a descendant module declaration,
+      # registers a descendant module in the list of loaded modules.
+      #
+      def self.included(base)
+        return if Mimi.loaded_modules.include?(base)
+        Mimi.loaded_modules << base
+        base.send :extend, ClassMethods
       end
 
-      class_methods do
+      module ClassMethods
         def configure(opts = {})
-          @module_options = (@module_default_options || {}).deep_merge(opts)
+          @options = {}.deep_merge(opts)
         end
 
         def module_path
           nil
         end
 
-        def module_manifest
+        def manifest
           {}
         end
 
@@ -35,14 +38,10 @@ module Mimi
           @module_started = false
         end
 
-        def module_options
-          @module_options || @module_default_options || {}
+        def options
+          @options || {}
         end
-
-        def default_options(opts = {})
-          @module_default_options = opts
-        end
-      end
+      end # module ClassMethods
     end # module Module
   end # module Core
 end # module Mimi
