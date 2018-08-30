@@ -86,8 +86,12 @@ describe 'Mimi::Core::InheritableProperty' do
   context 'simple value with a default' do
     let(:class_p) do
       Class.new(base_class) do
-        inheritable_property :var_proc, default: -> { :default_proc }
+        inheritable_property :var_proc, default: -> { self.object_id }
       end
+    end
+
+    let(:class_q) do
+      Class.new(class_p)
     end
 
     it 'defines A.var2 method' do
@@ -121,7 +125,12 @@ describe 'Mimi::Core::InheritableProperty' do
     it 'allows specifying a Proc as default' do
       expect { class_p }.to_not raise_error
       expect(class_p).to respond_to(:var_proc)
-      expect(class_p.var_proc).to eq :default_proc
+      expect(class_p.var_proc).to be_a Integer
+    end
+
+    it 'Proc as default is evaluated in the scope of the caller class' do
+      expect(class_p.var_proc).to eq class_p.object_id
+      expect(class_q.var_proc).to eq class_q.object_id
     end
   end # simple value with a default
 
