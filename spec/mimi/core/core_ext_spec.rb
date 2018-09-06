@@ -255,6 +255,46 @@ describe 'Mimi::Core extensions to base classes' do
       end
     end # #symbolize_keys!
 
+    context '#deep_symbolize_keys' do
+      let(:sample) do
+        { 1 => 1, '2' => 2, :"3" => { 3 => 3, '4' => 4, :"5" => 5 } }
+      end
+      let(:sample_symbolized) do
+        { 1 => 1, :"2" => 2, :"3" => { 3 => 3, :"4" => 4, :"5" => 5 } }
+      end
+      subject { sample }
+
+      it 'runs without errors' do
+        expect { subject.deep_symbolize_keys }.to_not raise_error
+      end
+
+      it 'symbolizes string keys' do
+        expect(subject.deep_symbolize_keys).to eq(sample_symbolized)
+      end
+    end # #deep_symbolize_keys
+
+    context '#deep_symbolize_keys!' do
+      let(:sample) do
+        { 1 => 1, '2' => 2, :"3" => { 3 => 3, '4' => 4, :"5" => 5 } }
+      end
+      let(:sample_symbolized) do
+        { 1 => 1, :"2" => 2, :"3" => { 3 => 3, :"4" => 4, :"5" => 5 } }
+      end
+      subject { sample }
+
+      it 'runs without errors' do
+        expect { subject.deep_symbolize_keys! }.to_not raise_error
+      end
+
+      it 'symbolizes string keys' do
+        expect(subject.deep_symbolize_keys!).to eq(sample_symbolized)
+      end
+
+      it 'modifes Hash in-place' do
+        expect { subject.deep_symbolize_keys! }.to change { sample }.to(sample_symbolized)
+      end
+    end # #deep_symbolize_keys!
+
     context '#stringify_keys' do
       let(:sample) do
         { 1 => 1, '2' => 2, :"3" => 3 }
@@ -294,5 +334,45 @@ describe 'Mimi::Core extensions to base classes' do
         expect { subject.stringify_keys! }.to change { sample }.to(sample_stringified)
       end
     end # #stringify_keys
+
+    context '#deep_stringify_keys' do
+      let(:sample) do
+        { 1 => 1, '2' => 2, :"3" => { 3 => 3, '4' => 4, :"5" => 5 } }
+      end
+      let(:sample_stringified) do
+        { '1' => 1, '2' => 2, '3' => { '3' => 3, '4' => 4, '5' => 5 } }
+      end
+      subject { sample }
+
+      it 'runs without errors' do
+        expect { subject.deep_stringify_keys }.to_not raise_error
+      end
+
+      it 'stringifies all keys' do
+        expect(subject.deep_stringify_keys).to eq(sample_stringified)
+      end
+    end # #deep_stringify_keys
+
+    context '#deep_stringify_keys!' do
+      let(:sample) do
+        { 1 => 1, '2' => 2, :"3" => { 3 => 3, '4' => 4, :"5" => 5 } }
+      end
+      let(:sample_stringified) do
+        { '1' => 1, '2' => 2, '3' => { '3' => 3, '4' => 4, '5' => 5 } }
+      end
+      subject { sample }
+
+      it 'runs without errors' do
+        expect { subject.deep_stringify_keys! }.to_not raise_error
+      end
+
+      it 'stringifies all keys' do
+        expect(subject.deep_stringify_keys!).to eq(sample_stringified)
+      end
+
+      it 'modifes Hash in-place' do
+        expect { subject.deep_stringify_keys! }.to change { sample }.to(sample_stringified)
+      end
+    end # #deep_stringify_keys
   end # Hash
 end
