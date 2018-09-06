@@ -47,34 +47,56 @@ class Hash
   end
 
   unless instance_methods(false).include?(:symbolize_keys)
-    include Hashie::Extensions::KeyConversion
+    def symbolize_keys
+      map do |k, v|
+        k = k.respond_to?(:to_sym) ? k.to_sym : k
+        [k, v]
+      end.to_h
+    end
+
+    def symbolize_keys!
+      replace(symbolize_keys)
+    end
   end
 
   unless instance_methods(false).include?(:deep_symbolize_keys)
-    include Hashie::Extensions::KeyConversion unless self < Hashie::Extensions::KeyConversion
-
     def deep_symbolize_keys
-      symbolize_keys_recursively
+      map do |k, v|
+        k = k.respond_to?(:to_sym) ? k.to_sym : k
+        v = v.respond_to?(:deep_symbolize_keys) ? v.deep_symbolize_keys : v
+        [k, v]
+      end.to_h
     end
 
     def deep_symbolize_keys!
-      symbolize_keys_recursively!
+      replace(deep_symbolize_keys)
     end
   end
 
   unless instance_methods(false).include?(:stringify_keys)
-    include Hashie::Extensions::KeyConversion
+    def stringify_keys
+      map do |k, v|
+        k = k.respond_to?(:to_s) ? k.to_s : k
+        [k, v]
+      end.to_h
+    end
+
+    def stringify_keys!
+      replace(stringify_keys)
+    end
   end
 
   unless instance_methods(false).include?(:deep_stringify_keys)
-    include Hashie::Extensions::KeyConversion unless self < Hashie::Extensions::KeyConversion
-
     def deep_stringify_keys
-      stringify_keys_recursively
+      map do |k, v|
+        k = k.respond_to?(:to_s) ? k.to_s : k
+        v = v.respond_to?(:deep_stringify_keys) ? v.deep_stringify_keys : v
+        [k, v]
+      end.to_h
     end
 
     def deep_stringify_keys!
-      stringify_keys_recursively!
+      replace(deep_stringify_keys)
     end
   end
 end
