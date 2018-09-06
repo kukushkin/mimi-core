@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'pathname'
 
 module Mimi
   #
-  # Mimi::Core extends the Mimi namespace with following methods.
+  # `Mimi::Core` extends the `Mimi` namespace with its instance methods.
   #
   module Core
     # Returns the application's root path.

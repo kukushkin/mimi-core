@@ -23,6 +23,25 @@ module Mimi
         end
 
         def manifest
+          {
+            my_var1: {
+              default: 123,
+              type: :integer,
+              desc: 'My Variable 1'
+            },
+
+            my_var2: {
+              type: :string
+            },
+
+            my_var3: {
+              desc: 'Description of the var 3',
+              type: [:string, :integer, :decimal, :boolean, :json, :enum],
+              hidden: true
+            }
+          }
+
+          #
           {}
         end
 
