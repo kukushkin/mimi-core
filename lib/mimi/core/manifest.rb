@@ -132,6 +132,28 @@ module Mimi
         @manifest = manifest_hash.deep_dup
       end
 
+      # Returns a Hash representation of the Manifest
+      #
+      # @return [Hash]
+      #
+      def to_h
+        @manifest
+      end
+
+      # Merges current Manifest with another Hash or Manifest
+      #
+      # @param another [Mimi::Core::Manifest,Hash]
+      #
+      def merge(another)
+        if !another.is_a?(Mimi::Core::Manifest) && !another.is_a?(Hash)
+          raise ArgumentError 'Another Mimi::Core::Manifest or Hash is expected'
+        end
+        another_hash = another.is_a?(Hash) ? another.deep_dup : another.to_h.deep_dup
+        new_manifest_hash = @manifest.deep_merge(another_hash)
+        self.class.validate_manifest_hash(new_manifest_hash)
+        @manifest = new_manifest_hash
+      end
+
       # Validates a Hash representation of the manifest
       #
       # * all keys are symbols

@@ -93,4 +93,48 @@ describe Mimi::Core::Manifest do
       end.to raise_error ArgumentError
     end
   end # .validate_manifest_hash
+
+  context '#to_h' do
+    let(:manifest_empty) { Mimi::Core::Manifest.new }
+    let(:manifest_hash) do
+      { var1: {}, var2: { desc: 'var2.desc', type: :string } }
+    end
+
+    it { expect(manifest_empty).to respond_to(:to_h) }
+
+    it 'exposes an empty Manifest as an empty Hash' do
+      expect(manifest_empty.to_h).to be_a Hash
+      expect(manifest_empty.to_h).to eq({})
+    end
+
+    it 'exposes a non-empty Manifest as a Hash' do
+      manifest = Mimi::Core::Manifest.new(manifest_hash)
+      expect(manifest.to_h).to be_a Hash
+      expect(manifest.to_h).to eq manifest_hash
+      expect(manifest.to_h.object_id).to_not eq manifest_hash.object_id
+    end
+  end # #to_h
+
+  context '.new and #merge' do
+    let(:manifest_empty) { Mimi::Core::Manifest.new }
+    let(:manifest_hash) do
+      { var1: {}, var2: { desc: 'var2.desc', type: :string } }
+    end
+    let(:manifest_hash_invalid) do
+      { var1: {}, var2: { type: :invalid } }
+    end
+
+    it { expect(manifest_empty).to respond_to(:merge) }
+
+    it 'merges an empty manifest with a new Hash' do
+      manifest = manifest_empty.dup
+      expect(manifest.to_h).to eq({})
+      expect { manifest.merge(manifest_hash) }.to_not raise_error
+      expect(manifest.to_h).to eq manifest_hash
+    end
+
+    it 'raises an error if merging with invalid Hash' do
+      expect { manifest_empty.merge(manifest_hash_invalid) }.to raise_error ArgumentError
+    end
+  end # .new and #merge
 end
