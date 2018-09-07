@@ -109,6 +109,7 @@ module Mimi
 end # module Mimi
 
 require_relative 'core/version'
+require_relative 'core/core_ext'
 require_relative 'core/inheritable_property'
 require_relative 'core/module'
-require_relative 'core/core_ext'
+require_relative 'core/manifest'
