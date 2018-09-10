@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'bigdecimal'
+require 'json'
+
 module Mimi
   module Core
     #
@@ -121,15 +124,13 @@ module Mimi
     class Manifest
       ALLOWED_TYPES = %w[string integer decimal boolean json].freeze
 
-      attr_reader :manifest
-
       # Constructs a new Manifest from its Hash representation
       #
       # @param manifest_hash [Hash,nil] default is empty manifest
       #
       def initialize(manifest_hash = {})
         self.class.validate_manifest_hash(manifest_hash)
-        @manifest = manifest_hash.deep_dup
+        @manifest = manifest_hash_canonical(manifest_hash.deep_dup)
       end
 
       # Returns a Hash representation of the Manifest
@@ -150,8 +151,106 @@ module Mimi
         end
         another_hash = another.is_a?(Hash) ? another.deep_dup : another.to_h.deep_dup
         new_manifest_hash = @manifest.deep_merge(another_hash)
+        new_manifest_hash = manifest_hash_canonical(new_manifest_hash)
         self.class.validate_manifest_hash(new_manifest_hash)
         @manifest = new_manifest_hash
+      end
+
+      # Accepts the values, performs the validation and applies the manifest,
+      # responding with a Hash of parameters and processed values.
+      #
+      # Performs the type coercion of values to the specified configurable parameter type.
+      #
+      #   * type: :string, value: anything => `String`
+      #   * type: :integer, value: `1` or `'1'` => `1`
+      #   * type: :decimal, value: `1`, `1.0 (BigDecimal)`, `'1'` or `'1.0'` => `1.0 (BigDecimal)`
+      #   * type: :boolean, value: `true` or `'true'` => `true`
+      #   * type: :json, value: `{ 'id' => 123 }` or `'{"id":123}'` => `{ 'id' => 123 }`
+      #   * type: `['a', 'b', 'c']` , value: `'a'` => `'a'`
+      #
+      # Example:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(
+      #   var1: {},
+      #   var2: :integer,
+      #   var3: :decimal,
+      #   var4: :boolean,
+      #   var5: :json,
+      #   var6: ['a', 'b', 'c']
+      # )
+      #
+      # manifest.apply(
+      #   var1: 'var1.value',
+      #   var2: '2',
+      #   var3: '3',
+      #   var4: 'false',
+      #   var5: '[{"name":"value"}]',
+      #   var6: 'c'
+      # )
+      # # =>
+      # # {
+      # #   var1: 'var1.value', var2: 2, var3: 3.0, var4: false,
+      # #   var5: [{ 'name' => 'value '}], var6: 'c'
+      # # }
+      # ```
+      #
+      # If `:default` is specified for the parameter and the value is not provided,
+      # the default value is returned as-is, bypassing validation and type coercion.
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: { default: nil })
+      # manifest.apply({}) # => { var1: nil }
+      # ```
+      #
+      # Values for parameters not defined in the manifest are ignored:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: {})
+      # manifest.apply(var1: '123', var2: '456') # => { var1: '123' }
+      # ```
+      #
+      # Configurable parameters defined as `:const` cannot be changed by provided values:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: { default: 1, const: true })
+      # manifest.apply(var1: 2) # => { var1: 1 }
+      # ```
+      #
+      # If a configurable parameter defined as *required* in the manifest (has no `:default`)
+      # and the provided values have no corresponding key, an ArgumentError is raised:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: {})
+      # manifest.apply({}) # => ArgumentError "Required value for 'var1' is missing"
+      # ```
+      #
+      # If a value provided for the configurable parameter is incompatible (different type,
+      # wrong format etc), an ArgumentError is raised:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: { type: :integer })
+      # manifest.apply(var1: 'abc') # => ArgumentError "Invalid value provided for 'var1'"
+      # ```
+      #
+      # During validation of provided values, all violations are detected and reported in
+      # a single ArgumentError:
+      #
+      # ```ruby
+      # manifest = Mimi::Core::Manifest.new(var1: { type: :integer }, var2: {})
+      # manifest.apply(var1: 'abc') # =>
+      # # ArgumentError "Invalid value provided for 'var1'. Required value for 'var2' is missing."
+      # ```
+      #
+      # @param values [Hash]
+      # @return [Hash<Symbol,Object>] where key is the parameter name, value is the parameter value
+      #
+      # @raise [ArgumentError] on validation errors, missing values etc
+      #
+      def apply(values)
+        raise ArgumentError, 'Hash is expected as values' unless values.is_a?(Hash)
+        validate_values(values)
+        process_values(values)
       end
 
       # Validates a Hash representation of the manifest
@@ -206,6 +305,164 @@ module Mimi
         end
       rescue ArgumentError => e
         raise ArgumentError, "Invalid manifest: invalid properties for '#{name}': #{e}"
+      end
+
+      private
+
+      # Sets the missing default properties in the properties Hash, converts values
+      # to canonical form.
+      #
+      # @param properties [Hash] set of properties of a configurable parameter
+      # @return [Hash] same Hash with all the missing properties set
+      #
+      def properties_canonical(properties)
+        properties = {
+          desc:   '',
+          type:   :string,
+          hidden: false,
+          const:  false
+        }.merge(properties)
+        properties[:desc] = properties[:desc].to_s
+        if properties[:type].is_a?(Array)
+          properties[:type] = properties[:type].map { |v| v.to_s }
+        elsif properties[:type].is_a?(String)
+          properties[:type] = properties[:type].to_sym
+        end
+        properties[:hidden] = !!properties[:hidden]
+        properties[:const] = !!properties[:const]
+        properties
+      end
+
+      # Converts a valid manifest Hash to a canonical form, with all defaults set
+      # and property values coerced:
+      #
+      # Example
+      #
+      # ```ruby
+      # manifest_hash_canonical(
+      #   var1: {},
+      #   var2: {
+      #     type: 'string',
+      #     hidden: nil,
+      #     default: 1,
+      #     const: false
+      #   }
+      # )
+      # # =>
+      # # {
+      # #   var1: { desc: '', type: :string, hidden: false, const: false },
+      # #   var2: { desc: '', type: :string, default: 1, hidden: false, const: false }
+      # # }
+      #
+      # ```
+      #
+      # @param manifest_hash [Hash]
+      # @return [Hash]
+      #
+      def manifest_hash_canonical(manifest_hash)
+        manifest_hash.map do |name, props|
+          [name, properties_canonical(props)]
+        end.to_h
+      end
+
+      # Validates provided values
+      #
+      # @param values [Hash]
+      # @raise [ArgumentError] if any of the values are invalid or missing
+      #
+      def validate_values(values)
+        missing_values = @manifest.keys.select do |key|
+          if @manifest[key].keys.include?(:default)
+            false # not required value
+          else
+            values[key].nil? # value required and missing
+          end
+        end
+        invalid_values = @manifest.keys.reject do |key|
+          type = @manifest[key][:type]
+          value = values[key]
+          case type
+          when :string
+            true # anything is valid
+          when :integer
+            value.is_a?(Integer) || (value.is_a?(String) && value =~ /^\d+$/)
+          when :decimal
+            value.is_a?(Integer) || value.is_a?(BigDecimal) ||
+              (value.is_a?(String) && value =~ /^\d+(\.\d+)?$/)
+          when :boolean
+            value.is_a?(TrueClass) || value.is_a?(FalseClass) ||
+              (value.is_a?(String) && value =~ /^(true|false)$/)
+          when :json
+            validate_value_json(value)
+          when Array
+            type.include?(value)
+          else
+            raise "Unexpected type '#{type}' for '#{key}'"
+          end
+        end
+        messages =
+          missing_values.map do |key|
+            "Required value for '#{key}' is missing."
+          end + invalid_values.map do |key|
+            "Invalid value provided for '#{key}'."
+          end
+        raise ArgumentError, messages.join(' ') unless messages.empty?
+      end
+
+      # Validates a single JSON value
+      #
+      # * must be a String
+      # * must be a valid JSON
+      #
+      # @param value [String]
+      # @return [true,false]
+      #
+      def validate_value_json(value)
+        return false unless value.is_a?(String)
+        JSON.parse(value)
+        true
+      rescue JSON::ParserError
+        false
+      end
+
+      # Processes the given set of values and returns a Hash of configurable parameter
+      # values.
+      #
+      # @param values [Hash]
+      # @return [Hash]
+      #
+      def process_values(values)
+        @manifest.map do |name, props|
+          [name, process_single_value(values[name], props)]
+        end.to_h
+      end
+
+      # Processes a single value with a given set of configurable parameter properties
+      #
+      # @param value [Object,nil] nil indicates the value is not provided (default should be used)
+      # @param properties [Hash]
+      # @return [Object]
+      #
+      def process_single_value(value, properties)
+        if properties[:const] || value.nil?
+          return properties[:default].is_a?(Proc) ? properties[:default].call : properties[:default]
+        end
+        case properties[:type]
+        when :string
+          value.to_s
+        when :integer
+          value.to_i
+        when :decimal
+          BigDecimal(value)
+        when :boolean
+          value.is_a?(TrueClass) || value == 'true'
+        when :json
+          JSON.parse(value)
+        when Array
+          value
+        else
+          raise "Unexpected type '#{type}' for '#{key}'"
+        end
       end
     end # class Manifest
   end # module Core
