@@ -129,7 +129,7 @@ describe Mimi::Core::Manifest do
     end
   end # #to_h
 
-  context '.new and #merge' do
+  context '.new and #merge!' do
     let(:manifest_empty) { Mimi::Core::Manifest.new }
     let(:manifest_hash) do
       { var1: {}, var2: { desc: 'var2.desc', type: :string } }
@@ -154,28 +154,29 @@ describe Mimi::Core::Manifest do
     end
 
     it { expect(manifest_empty).to respond_to(:merge) }
+    it { expect(manifest_empty).to respond_to(:merge!) }
 
 
     it 'does NOT raise an error when merging an empty Hash' do
-      expect { manifest_empty.merge({}) }.to_not raise_error
+      expect { manifest_empty.merge!({}) }.to_not raise_error
     end
 
     it 'raises an error if merging with invalid Hash' do
-      expect { manifest_empty.merge(manifest_hash_invalid) }.to raise_error ArgumentError
+      expect { manifest_empty.merge!(manifest_hash_invalid) }.to raise_error ArgumentError
     end
 
     it 'successfully merges an empty manifest with a new Hash' do
       manifest = manifest_empty.dup
       expect(manifest.to_h).to eq({})
-      expect { manifest.merge(manifest_hash) }.to_not raise_error
+      expect { manifest.merge!(manifest_hash) }.to_not raise_error
       expect(manifest.to_h).to eq manifest_hash_with_defaults
     end
 
     it 'successfully deep-merges a non-empty manifest with a new Hash' do
       manifest = manifest_empty.dup
       expect(manifest.to_h).to eq({})
-      expect { manifest.merge(manifest_hash) }.to_not raise_error
-      expect { manifest.merge(manifest_hash_2) }.to_not raise_error
+      expect { manifest.merge!(manifest_hash) }.to_not raise_error
+      expect { manifest.merge!(manifest_hash_2) }.to_not raise_error
       expect(manifest.to_h).to eq manifest_hash_merged_with_defaults
     end
   end # .new and #merge

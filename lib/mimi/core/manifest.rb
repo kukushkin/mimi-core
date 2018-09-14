@@ -141,9 +141,18 @@ module Mimi
         @manifest
       end
 
-      # Merges current Manifest with another Hash or Manifest
+      # Merges current Manifest with another Hash or Manifest, modifies current Manifest in-place
       #
       # @param another [Mimi::Core::Manifest,Hash]
+      #
+      def merge!(another)
+        @manifest = merge(another).to_h
+      end
+
+      # Returns a copy of current Manifest merged with another Hash or Manifest
+      #
+      # @param another [Mimi::Core::Manifest,Hash]
+      # @return [Mimi::Core::Manifest]
       #
       def merge(another)
         if !another.is_a?(Mimi::Core::Manifest) && !another.is_a?(Hash)
@@ -153,7 +162,7 @@ module Mimi
         new_manifest_hash = @manifest.deep_merge(another_hash)
         new_manifest_hash = manifest_hash_canonical(new_manifest_hash)
         self.class.validate_manifest_hash(new_manifest_hash)
-        @manifest = new_manifest_hash
+        self.class.new(new_manifest_hash)
       end
 
       # Accepts the values, performs the validation and applies the manifest,
