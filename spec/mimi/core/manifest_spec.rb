@@ -1,6 +1,16 @@
 require 'spec_helper'
 
 describe Mimi::Core::Manifest do
+  #
+  # Constructs a manifest object from Hash
+  #
+  # @param hash [Hash]
+  # @return [Mimi::Core::Manifest]
+  #
+  def manifest_from(hash)
+    Mimi::Core::Manifest.new(hash)
+  end
+
   let(:properties_defaults) do
     { desc: '', type: :string, hidden: false, const: false }
   end
@@ -182,10 +192,6 @@ describe Mimi::Core::Manifest do
   end # .new and #merge
 
   context '#apply' do
-    def manifest_from(hash)
-      Mimi::Core::Manifest.new(hash)
-    end
-
     let(:manifest_full_hash) do
       {
         var1: {},
@@ -288,4 +294,42 @@ describe Mimi::Core::Manifest do
       expect { manifest.apply(var1: 'd') }.to raise_error(ArgumentError)
     end
   end # #apply
+
+  context '#keys' do
+    let(:manifest_full) { manifest_from(manifest_sample) }
+    let(:keys_sample) { manifest_sample.keys.dup }
+    subject { manifest_from({}) }
+
+    it { is_expected.to respond_to(:keys) }
+
+    it 'responds with empty Array on an empty manifest' do
+      expect(subject.keys).to eq []
+    end
+
+    it 'responds with a list of configurable parameter names on a non-empty manifest' do
+      expect(manifest_full.keys).to eq keys_sample
+    end
+  end # #keys
+
+  context '#required?' do
+    subject { manifest_from(manifest_sample) }
+
+    it { is_expected.to respond_to(:required?) }
+
+    it 'responds with false on an undeclared configurable parameter' do
+      expect(subject.required?(:foobar)).to eq false
+    end
+
+    it 'responds with false on a declared optional parameter' do
+      expect(subject.required?(:var2)).to eq false
+    end
+
+    it 'responds with true on a declared required parameter' do
+      expect(subject.required?(:var1)).to eq true
+    end
+
+    it 'raises an error if the argument is not a Symbol' do
+      expect { subject.required?('var1') }.to raise_error(ArgumentError)
+    end
+  end # #required?
 end

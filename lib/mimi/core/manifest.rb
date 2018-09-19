@@ -141,6 +141,26 @@ module Mimi
         @manifest
       end
 
+      # Returns a list of configurable parameter names
+      #
+      # @return [Array<Symbol>]
+      #
+      def keys
+        @manifest.keys
+      end
+
+      # Returns true if the configurable parameter is a required one
+      #
+      # @param name [Symbol] the name of configurable parameter
+      # @return [true,false]
+      #
+      def required?(name)
+        raise ArgumentError, 'Symbol is expected as the parameter name' unless name.is_a?(Symbol)
+        props = @manifest[name]
+        return false unless props
+        !props.keys.include?(:default)
+      end
+
       # Merges current Manifest with another Hash or Manifest, modifies current Manifest in-place
       #
       # @param another [Mimi::Core::Manifest,Hash]
@@ -381,11 +401,7 @@ module Mimi
       #
       def validate_values(values)
         missing_values = @manifest.keys.select do |key|
-          if @manifest[key].keys.include?(:default)
-            false # not required value
-          else
-            values[key].nil? # value required and missing
-          end
+          required?(key) && values[key].nil? # value required and missing
         end
         invalid_values = @manifest.keys.reject do |key|
           type = @manifest[key][:type]
