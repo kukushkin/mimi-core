@@ -45,7 +45,7 @@ module Mimi
       # Loads rake tasks exported by *loaded* modules
       #
       def self.load_rake_tasks
-        unless Mimi.respond_to(:app_root_path)
+        unless Mimi.respond_to?(:app_root_path)
           raise 'Cannot load rake tasks before mimi-core module is loaded'
         end
         app_and_modules_paths = [Mimi.app_root_path] + Mimi.loaded_modules_paths

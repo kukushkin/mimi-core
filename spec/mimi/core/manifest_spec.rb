@@ -254,8 +254,13 @@ describe Mimi::Core::Manifest do
       expect(manifest_empty.apply({})).to eq({})
     end
 
-    it 'processes a default with a literal value' do
-      manifest = manifest_from(var1: { default: 1 })
+    it 'processes a default with a literal value, type string' do
+      manifest = manifest_from(var1: { type: :string, default: '1' })
+      expect(manifest.apply({})).to eq(var1: '1')
+    end
+
+    it 'processes a default with a literal value, type integer' do
+      manifest = manifest_from(var1: { type: :integer, default: 1 })
       expect(manifest.apply({})).to eq(var1: 1)
     end
 
@@ -332,4 +337,35 @@ describe Mimi::Core::Manifest do
       expect { subject.required?('var1') }.to raise_error(ArgumentError)
     end
   end # #required?
+
+  context '.from_yaml, #to_yaml' do
+    let(:sample_yaml) { fixture('manifest.1.yml') }
+    let(:sample_hash) do
+      {
+        min1: properties_defaults,
+        opt1: properties_defaults.merge(desc: 'opt1.desc', default: 'opt1.default'),
+        req1: properties_defaults.merge(desc: 'req1.desc'),
+        opt2: properties_defaults.merge(type: :integer, default: nil),
+        const1: properties_defaults.merge(desc: 'const1.desc', const: true, default: 'const1.default')
+      }
+    end
+    let(:manifest_from_yaml) { described_class.from_yaml(sample_yaml) }
+    let(:manifest_from_hash) { manifest_from(sample_hash) }
+    subject { manifest_from_hash }
+
+    it { expect(described_class).to respond_to(:from_yaml) }
+    it { is_expected.to respond_to(:to_yaml) }
+
+    it 'parses manifest from YAML with .from_yaml' do
+      expect { manifest_from_yaml }.to_not raise_error
+      expect(manifest_from_yaml).to be_a Mimi::Core::Manifest
+      expect(manifest_from_yaml.to_h).to eq sample_hash
+    end
+
+    it 'converts manifest to YAML with #to_yaml' do
+      expect { manifest_from_hash.to_yaml }.to_not raise_error
+      expect(manifest_from_hash.to_yaml).to be_a String
+      expect(manifest_from_hash.to_yaml).to eq sample_yaml
+    end
+  end # .from_yaml, #to_yaml
 end

@@ -1,0 +1,17 @@
+min1:
+
+opt1:
+  desc: "opt1.desc"
+  default: "opt1.default"
+
+req1:
+  desc: "req1.desc"
+
+opt2:
+  type: integer
+  default: # nil
+
+const1:
+  desc: "const1.desc"
+  const: true
+  default: "const1.default"

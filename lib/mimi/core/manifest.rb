@@ -2,6 +2,7 @@
 
 require 'bigdecimal'
 require 'json'
+require 'yaml'
 
 module Mimi
   module Core
@@ -157,7 +158,7 @@ module Mimi
       def required?(name)
         raise ArgumentError, 'Symbol is expected as the parameter name' unless name.is_a?(Symbol)
         props = @manifest[name]
-        return false unless props
+        return false unless props # parameter is not required if it is not declared
         !props.keys.include?(:default)
       end
 
@@ -336,6 +337,46 @@ module Mimi
         raise ArgumentError, "Invalid manifest: invalid properties for '#{name}': #{e}"
       end
 
+      # Constructs a Manifest object from a YAML representation
+      #
+      # @param yaml [String]
+      # @return [Mimi::Core::Manifest]
+      #
+      def self.from_yaml(yaml)
+        manifest_hash = YAML.safe_load(yaml)
+        raise 'Invalid manifest, JSON Object is expected' unless manifest_hash.is_a?(Hash)
+        manifest_hash = manifest_hash.map do |k, v|
+          v = (v || {}).symbolize_keys
+          [k.to_sym, v]
+        end.to_h
+        new(manifest_hash)
+      end
+
+      # Returns a YAML representation of the manifest
+      #
+      # @return [String]
+      #
+      def to_yaml
+        out = []
+        to_h.each do |k, v|
+          next if v[:hidden]
+          out << "#{k}:"
+          vy = v[:desc].nil? ? '# nil' : v[:desc].inspect # value to yaml
+          out << "  desc: #{vy}" if v.key?(:desc) && !v[:desc].empty?
+          if v[:type].is_a?(Array)
+            out << '  type:'
+            v[:type].each { |t| out << "    - #{t}" }
+          elsif v[:type] != :string
+            out << "  type: #{v[:type]}"
+          end
+          out << '  const: true' if v[:const]
+          vy = v[:default].nil? ? '# nil' : v[:default].inspect # value to yaml
+          out << "  default: #{vy}" if v.key?(:default)
+          out << ''
+        end
+        out.join("\n")
+      end
+
       private
 
       # Sets the missing default properties in the properties Hash, converts values
@@ -400,10 +441,13 @@ module Mimi
       # @raise [ArgumentError] if any of the values are invalid or missing
       #
       def validate_values(values)
+        # select keys where value is required and missing
         missing_values = @manifest.keys.select do |key|
-          required?(key) && values[key].nil? # value required and missing
+          required?(key) && values[key].nil?
         end
-        invalid_values = @manifest.keys.reject do |key|
+
+        # select keys where value is provided and invalid
+        invalid_values = @manifest.keys.select { |key| values[key] }.reject do |key|
           type = @manifest[key][:type]
           value = values[key]
           case type
