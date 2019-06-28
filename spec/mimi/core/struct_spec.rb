@@ -32,6 +32,7 @@ describe Mimi::Core::Struct do
     end
 
     it { is_expected.to respond_to(:[]) }
+    it { is_expected.to_not respond_to(:[]=) }
     it { is_expected.to respond_to(:to_h) }
   end
 
@@ -47,10 +48,16 @@ describe Mimi::Core::Struct do
       expect(subject).to be_a(Mimi::Core::Struct)
     end
 
-    it "provides access to members as methods" do
+    it "provides read access to members as methods" do
       expect(subject).to respond_to(:a)
       expect(subject).to respond_to(:b)
       expect(subject).to respond_to(:c)
+    end
+
+    it "does NOT provide write access to members as methods" do
+      expect(subject).to_not respond_to(:a=)
+      expect(subject).to_not respond_to(:b=)
+      expect(subject).to_not respond_to(:c=)
     end
 
     it "does NOT allow method access to non-defined members" do
