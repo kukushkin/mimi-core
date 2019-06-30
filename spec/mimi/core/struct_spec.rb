@@ -34,7 +34,49 @@ describe Mimi::Core::Struct do
     it { is_expected.to respond_to(:[]) }
     it { is_expected.to_not respond_to(:[]=) }
     it { is_expected.to respond_to(:to_h) }
+    it { is_expected.to respond_to(:dup) }
+    it { is_expected.to respond_to(:==) }
   end
+
+  describe "#==" do
+    let(:struct1) { described_class.new(a: 1) }
+    let(:struct2) { described_class.new(a: 1) }
+    let(:struct3) { described_class.new(a: 2) }
+
+    subject { struct1 == struct2 }
+
+    it "runs without errors" do
+      expect { subject }.to_not raise_error
+    end
+
+    it "returns true if different Structs have equal values" do
+      expect(struct1 == struct2).to be true
+    end
+
+    it "returns false if different Structs have different values" do
+      expect(struct1 == struct3).to be false
+    end
+  end # #==
+
+  describe "#dup" do
+    let(:struct1) { described_class.new(a: 1) }
+    let(:struct2) { struct1.dup }
+
+    subject { struct2 }
+
+    it "runs without errors" do
+      expect { subject }.to_not raise_error
+    end
+
+    it "returns a new object" do
+      expect(subject.object_id).to_not eq struct1.object_id
+    end
+
+    it "a new object provides access to member attributes" do
+      expect(subject).to respond_to(:a)
+      expect { subject[:a] }.to_not raise_error
+    end
+  end # #dup
 
   context "when initialized with a Hash" do
     let(:params) do
