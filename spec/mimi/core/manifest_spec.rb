@@ -254,6 +254,11 @@ describe Mimi::Core::Manifest do
       expect(manifest_empty.apply({})).to eq({})
     end
 
+    it 'processes a default value of nil, as-is' do
+      manifest = manifest_from(var1: { type: :string, default: nil })
+      expect(manifest.apply({})).to eq(var1: nil)
+    end
+
     it 'processes a default with a literal value, type string' do
       manifest = manifest_from(var1: { type: :string, default: '1' })
       expect(manifest.apply({})).to eq(var1: '1')
@@ -264,9 +269,16 @@ describe Mimi::Core::Manifest do
       expect(manifest.apply({})).to eq(var1: 1)
     end
 
+    it 'processes a default with a literal value, converting value to given type' do
+      manifest = manifest_from(var1: { type: :integer, default: '1' })
+      expect(manifest.apply({})).to eq(var1: 1)
+      manifest = manifest_from(var1: { type: :decimal, default: '1.0' })
+      expect(manifest.apply({})).to eq(var1: BigDecimal(1))
+    end
+
     it 'prevents changing :const parameters' do
-      manifest = manifest_from(var1: { const: true, default: 1 })
-      expect(manifest.apply(var1: 123)).to eq(var1: 1)
+      manifest = manifest_from(var1: { type: :string, const: true, default: 1 })
+      expect(manifest.apply(var1: 123)).to eq(var1: '1')
     end
 
     it 'raises an ArgumentError if a required parameter is missing' do

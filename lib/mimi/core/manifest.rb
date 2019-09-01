@@ -226,7 +226,7 @@ module Mimi
       # ```
       #
       # If `:default` is specified for the parameter and the value is not provided,
-      # the default value is returned as-is, bypassing validation and type coercion.
+      # the default value is returned, converted to corresponding type, if it is not nil
       #
       # ```ruby
       # manifest = Mimi::Core::Manifest.new(var1: { default: nil })
@@ -514,7 +514,9 @@ module Mimi
       #
       def process_single_value(value, properties)
         if properties[:const] || value.nil?
-          return properties[:default].is_a?(Proc) ? properties[:default].call : properties[:default]
+          return properties[:default].call if properties[:default].is_a?(Proc)
+          return nil if properties[:default].nil?
+          value = properties[:default]
         end
         case properties[:type]
         when :string
